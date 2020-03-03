@@ -5,13 +5,21 @@ from ast import literal_eval
 import requests
 import json
 import time
+from dotenv import load_dotenv
+import os
+from world import World
+
+
+load_dotenv()
+tokens = os.getenv('TOKEN')
+
 
 seed = random.randint(0, 217120)
 random.seed(185393)
 
 adv_endpoint = "https://lambda-treasure-hunt.herokuapp.com/api/adv"
 bc_endpoint = "https://lambda-treasure-hunt.herokuapp.com/api/bc"
-token = 'Token ' + "2112332c7e8196503ad70f3056c67ef490742170"
+token = 'Token ' + tokens
 
 headers = {
     'Authorization': token
@@ -24,13 +32,24 @@ headers_post = {
 
 visited_rooms = {}
 
+map_file = "map.txt"
+
+world = World()
+
+# Loads the map into a dictionary
+room_graph=literal_eval(open(map_file, "r").read())
+world.load_graph(room_graph)
+
+# Print an ASCII map
+world.print_rooms()
+
 def init():
     r = requests.get(f'{adv_endpoint}/init/', headers=headers)
     data = r.json()
     # with open('current_rooms.txt', 'w') as f:
     #     f.write(json.dumps(data))
-    with open('rooms.txt', 'w') as f:
-        f.write(json.dumps(data) + '\n')
+    # with open('rooms.txt', 'w') as f:
+    #     f.write(json.dumps(data) + '\n')
     wait(data['cooldown'])
     print('Init: ', data)
     return data
@@ -39,20 +58,20 @@ def move(direction):
     data = {"direction": f"{direction}"}
     r = requests.post(f'{adv_endpoint}/move/', data=json.dumps(data), headers=headers_post)
     data_json = r.json()
-    with open('rooms.txt', 'a') as f:
-        f.write(json.dumps(data_json) + '\n')
+    # with open('rooms.txt', 'a') as f:
+    #     f.write(json.dumps(data_json) + '\n')
     wait(data_json['cooldown'])
     print('Move: ', data_json)
-    print("Current number of visited rooms: ", len(visited_rooms))
-    print('visted_rooms: ', visited_rooms)
+    # print("Current number of visited rooms: ", len(visited_rooms))
+    # print('visted_rooms: ', visited_rooms)
     return data_json
 
 def wise_explorer(direction, room_id):
     data = {"direction": f"{direction}", "room_id": f"{room_id}"}
     r = requests.post(f'{adv_endpoint}/move', data=json.dumps(data), headers=headers)
     data_json = r.json()
-    with open('rooms.txt', 'a') as f:
-        f.write(json.dumps(data_json))
+    # with open('rooms.txt', 'a') as f:
+    #     f.write(json.dumps(data_json))
     print('Wise: ', data_json)
     wait(data_json['cooldown'])
     return data_json
@@ -206,95 +225,6 @@ def transmogrify(name):
     wait(data_json['cooldown'])
     return data_json
 
-## FUNCTIONS TO PRINT THE MAP START ##
-def load_graph(room_graph):
-    print(room_graph)
-    num_rooms = len(room_graph)
-    rooms = [None] * num_rooms
-    grid_size = 1
-    for i in range(0, num_rooms):
-        x = room_graph[i][0][0]
-        grid_size = max(grid_size, room_graph[i][0][0], room_graph[i][0][1])
-        self.rooms[i] = Room(f"Room {i}", f"({room_graph[i][0][0]},{room_graph[i][0][1]})",i, room_graph[i][0][0], room_graph[i][0][1])
-    self.room_grid = []
-    grid_size += 1
-    self.grid_size = grid_size
-    for i in range(0, grid_size):
-        self.room_grid.append([None] * grid_size)
-    for room_id in room_graph:
-        room = self.rooms[room_id]
-        self.room_grid[room.x][room.y] = room
-        if 'n' in room_graph[room_id][1]:
-            self.rooms[room_id].connect_rooms('n', self.rooms[room_graph[room_id][1]['n']])
-        if 's' in room_graph[room_id][1]:
-            self.rooms[room_id].connect_rooms('s', self.rooms[room_graph[room_id][1]['s']])
-        if 'e' in room_graph[room_id][1]:
-            self.rooms[room_id].connect_rooms('e', self.rooms[room_graph[room_id][1]['e']])
-        if 'w' in room_graph[room_id][1]:
-            self.rooms[room_id].connect_rooms('w', self.rooms[room_graph[room_id][1]['w']])
-    self.starting_room = self.rooms[0]
-
-def print_rooms():
-    rotated_room_grid = []
-
-    for i in range(0, len(self.room_grid)):
-        rotated_room_grid.append([None] * len(self.room_grid))
-    for i in range(len(self.room_grid)):
-        for j in range(len(self.room_grid[0])):
-            rotated_room_grid[len(self.room_grid[0]) - j - 1][i] = self.room_grid[i][j]
-    print("#####")
-    str = ""
-    for row in rotated_room_grid:
-        all_null = True
-        for room in row:
-            if room is not None:
-                all_null = False
-                break
-        if all_null:
-            continue
-        # PRINT NORTH CONNECTION ROW
-        str += "#"
-        for room in row:
-            if room is not None and room.n_to is not None:
-                str += "  |  "
-            else:
-                str += "     "
-        str += "#\n"
-        # PRINT ROOM ROW
-        str += "#"
-        for room in row:
-            if room is not None and room.w_to is not None:
-                str += "-"
-            else:
-                str += " "
-            if room is not None:
-                str += f"{room.id}".zfill(3)
-            else:
-                str += "   "
-            if room is not None and room.e_to is not None:
-                str += "-"
-            else:
-                str += " "
-        str += "#\n"
-        # PRINT SOUTH CONNECTION ROW
-        str += "#"
-        for room in row:
-            if room is not None and room.s_to is not None:
-                str += "  |  "
-            else:
-                str += "     "
-        str += "#\n"
-    print(str)
-    print("#####")
-
-map_file = "rooms.txt"
-
-# Loads the map into a dictionary
-room_graph=literal_eval(open(map_file, "r").read())
-load_graph(room_graph)
-
-## FUNCTIONS TO PRINT THE MAP END ##
-
 def reverse(direction):
     if direction == 'n':
         return 's'
@@ -366,8 +296,7 @@ def traverse():
             visited_rooms[current_room['room_id']][reverse(new_exit)] = previous_room['room_id']
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # traverse()
-    print_rooms()
-    with open('room_directions.txt', 'w') as f:
-        f.write(json.dumps(visited_rooms))
+    # with open('room_directions.txt', 'w') as f:
+    #     f.write(json.dumps(visited_rooms))
