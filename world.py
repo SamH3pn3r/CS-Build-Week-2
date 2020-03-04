@@ -1,6 +1,7 @@
 from room import Room
 import random
 import math
+from ast import literal_eval
 
 class World:
     def __init__(self):
@@ -86,4 +87,13 @@ class World:
         print(str)
         print("#####")
 
+map_file = "map.txt"
 
+world = World()
+
+# Loads the map into a dictionary
+room_graph=literal_eval(open(map_file, "r").read())
+world.load_graph(room_graph)
+
+# Print an ASCII map
+world.print_rooms()
